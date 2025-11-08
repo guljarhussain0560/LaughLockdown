@@ -19,11 +19,22 @@ export default function WebcamView({ status, isActive, onVideoRef }: WebcamViewP
   const videoPassedRef = useRef(false); // Track if we've already passed the video ref
 
   useEffect(() => {
-    // Request webcam permission
+    // Request webcam permission with mobile-optimized constraints
     async function requestPermission() {
       try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
+        // Mobile-friendly video constraints
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const constraints = {
+          video: isMobile ? {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          } : { facingMode: 'user' }
+        };
+        
+        await navigator.mediaDevices.getUserMedia(constraints);
         setHasPermission(true);
+        console.log('📱 Mobile-optimized webcam permission granted');
       } catch (error) {
         console.error('Webcam permission denied:', error);
         setHasPermission(false);

@@ -215,9 +215,9 @@ export default function GamePage() {
                 )}
 
                 {/* Main Game Layout */}
-                <div className="p-3 sm:p-4 max-w-7xl mx-auto">
-                  {/* Video Section - Side by side on PC, Stacked on Mobile */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div className="p-2 sm:p-3 md:p-4 max-w-7xl mx-auto">
+                  {/* Video Section - Stacked on Mobile, Side by side on Desktop */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-3 md:gap-4 mb-2 sm:mb-3 md:mb-4">
                     {/* Meme Display */}
                     <div className="w-full overflow-hidden bg-gray-100 border border-gray-200 aspect-video dark:bg-gray-800 rounded-lg sm:rounded-xl dark:border-gray-700">
                       <MemeDisplay 
@@ -227,8 +227,8 @@ export default function GamePage() {
                       />
                     </div>
 
-                    {/* Webcam Display */}
-                    <div className="w-full overflow-hidden bg-gray-100 border border-gray-200 aspect-video dark:bg-gray-800 rounded-lg sm:rounded-xl dark:border-gray-700">
+                    {/* Webcam Display - CRITICAL for mobile */}
+                    <div className="w-full overflow-hidden bg-gray-100 border-2 border-blue-500 dark:border-blue-600 aspect-video dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-lg">
                       <WebcamView
                         status={status}
                         isActive={isPlaying && gameState === 'playing'}
@@ -236,10 +236,25 @@ export default function GamePage() {
                           videoRef.current = ref;
                         }}
                       />
+                      {/* Mobile: AI Status Overlay */}
+                      <div className="lg:hidden mt-2 text-center">
+                        {!isModelLoaded && (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full text-xs font-medium text-blue-700 dark:text-blue-400">
+                            <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            Loading AI Model...
+                          </div>
+                        )}
+                        {isModelLoaded && (
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 rounded-full text-xs font-medium text-green-700 dark:text-green-400">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            AI Detection Active
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Game HUD */}
+                  {/* Game HUD - Touch-optimized for mobile */}
                   <div className="max-w-4xl mx-auto touch-manipulation">
                     <GameHUD
                       survivalTime={survivalTime}

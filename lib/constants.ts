@@ -34,10 +34,19 @@ export const MEME_ROTATION_INTERVAL = 5000; // 5 seconds
 export const SMILE_DETECTION_THRESHOLD = 0.6;
 
 /**
- * Webcam configuration
+ * Webcam configuration - Mobile-optimized
+ * Uses lower resolution on mobile for better performance and compatibility
  */
-export const WEBCAM_CONFIG = {
-  width: 640,
-  height: 480,
-  facingMode: 'user',
-};
+export const WEBCAM_CONFIG = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  ? {
+      width: { ideal: 640, max: 1280 },
+      height: { ideal: 480, max: 720 },
+      facingMode: 'user',
+      frameRate: { ideal: 20, max: 30 }, // Lower frame rate on mobile saves battery
+    }
+  : {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      facingMode: 'user',
+      frameRate: { ideal: 30 },
+    };
