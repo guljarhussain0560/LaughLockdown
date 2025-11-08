@@ -33,18 +33,10 @@ export function useSmileDetection(videoRef: React.RefObject<HTMLVideoElement>, i
     async function loadModel() {
       try {
         console.log('🤖 Loading TensorFlow.js Face Landmarks Detection Model...');
-        
-        // Try WebGL first, fallback to WASM for mobile compatibility
-        try {
-          await tf.setBackend('webgl');
-          await tf.ready();
-          console.log('✅ Using WebGL backend');
-        } catch (webglError) {
-          console.warn('⚠️ WebGL not available, falling back to WASM for mobile compatibility');
-          await tf.setBackend('wasm');
-          await tf.ready();
-          console.log('✅ Using WASM backend (mobile-compatible)');
-        }
+
+        // Set backend
+        await tf.setBackend('webgl');
+        await tf.ready();
         
         // Load the MediaPipeFaceMesh model
         const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
@@ -99,44 +91,23 @@ export function useSmileDetection(videoRef: React.RefObject<HTMLVideoElement>, i
         return;
       }
 
-      // Create canvas if needed for better detection (especially important on mobile)
+      // Create canvas if needed for better detection
       if (!canvasRef.current) {
         canvasRef.current = document.createElement('canvas');
         canvasRef.current.width = video.videoWidth;
         canvasRef.current.height = video.videoHeight;
-        console.log('📱 Canvas created for mobile detection:', {
-          width: canvasRef.current.width,
-          height: canvasRef.current.height
-        });
-      }
-
-      // Update canvas size if video dimensions changed (orientation change on mobile)
-      if (canvasRef.current.width !== video.videoWidth || canvasRef.current.height !== video.videoHeight) {
-        canvasRef.current.width = video.videoWidth;
-        canvasRef.current.height = video.videoHeight;
-        console.log('📱 Canvas resized for mobile:', {
-          width: canvasRef.current.width,
-          height: canvasRef.current.height
-        });
       }
 
       // Draw current video frame to canvas for better AI detection
-      const ctx = canvasRef.current.getContext('2d', { willReadFrequently: true });
+      const ctx = canvasRef.current.getContext('2d');
       if (ctx) {
-        // Mirror for front-facing camera (common on mobile)
-        ctx.save();
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, -canvasRef.current.width, 0, canvasRef.current.width, canvasRef.current.height);
-        ctx.restore();
+        ctx.drawImage(video, 0, 0, canvasRef.current.width, canvasRef.current.height);
       }
 
-      // AI-powered face and landmark detection
-      // Use video directly on desktop, canvas on mobile for better performance
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const inputElement = isMobile ? canvasRef.current : video;
-      
+      // AI-powered face and landmark detection (use canvas for better results)
+      const inputElement = canvasRef.current || video;
       const faces = await detectorRef.current.estimateFaces(inputElement, {
-        flipHorizontal: !isMobile, // Already flipped in canvas for mobile
+        flipHorizontal: false, // Don't flip since we're using canvas
         staticImageMode: false
       });
       
