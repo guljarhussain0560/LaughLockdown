@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Navbar from '@/components/Navbar';
 import MemeDisplay from '@/components/MemeDisplay';
 import { useSocket } from '@/lib/socketContext';
+import { useSmileDetection } from '@/hooks/useSmileDetection';
 
 interface Participant {
   id: string;
@@ -64,11 +65,47 @@ export default function MultiplayerRoomPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
 
+  // Smile detection hook - integrated from solo game
+  const { status: smileStatus, isModelLoaded, reset: resetSmileDetection } = useSmileDetection(
+    localVideoRef,
+    gameState === 'playing'
+  );
+
   // WebRTC State
   const { socket, isConnected } = useSocket();
   const [peerConnections, setPeerConnections] = useState<Map<string, RTCPeerConnection>>(new Map());
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+
+  // Handle player elimination when they smile
+  useEffect(() => {
+    if ((smileStatus === 'out' || smileStatus === 'no-face') && gameState === 'playing') {
+      console.log('😄 Player eliminated! Reason:', smileStatus === 'no-face' ? 'No face detected' : 'Smiled');
+      
+      // Update local state
+      setGameState('ended');
+      
+      // Notify server that player is out
+      if (socket && session?.user?.email) {
+        socket.emit('player-eliminated', {
+          contestId,
+          userId: session.user.email,
+          survivalTime,
+          reason: smileStatus === 'no-face' ? 'no-face' : 'smiled'
+        });
+      }
+
+      // Save result to database
+      fetch(`/api/multiplayer-contests/${contestId}/eliminate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          survivalTime,
+          reason: smileStatus === 'no-face' ? 'no-face' : 'smiled'
+        })
+      }).catch(err => console.error('Failed to save elimination:', err));
+    }
+  }, [smileStatus, gameState, contestId, socket, session, survivalTime]);
 
   // Initialize camera and mic
   useEffect(() => {
@@ -1018,6 +1055,28 @@ export default function MultiplayerRoomPage() {
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
                       Host
+                    </div>
+                  )}
+                  {/* AI Status Indicator */}
+                  {isModelLoaded ? (
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                        AI Active
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full">
+                      <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                        Loading AI...
+                      </span>
+                    </div>
+                  )}
+                  {/* Smile Status Indicator */}
+                  {smileStatus !== 'neutral' && smileStatus !== 'out' && (
+                    <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm font-semibold animate-pulse">
+                      {smileStatus === 'smiling' ? '😄 Smiling!' : '⚠️ No Face'}
                     </div>
                   )}
                 </div>
