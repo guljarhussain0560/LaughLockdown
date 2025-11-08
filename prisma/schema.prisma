@@ -51,11 +51,18 @@ model User {
   smileConnectionsFrom  SmileConnection[] @relation("ConnectionFrom")
   smileConnectionsTo    SmileConnection[] @relation("ConnectionTo")
   
+  // Friend System (for multiplayer games)
+  friendsInitiated      Friend[] @relation("FriendInitiator")
+  friendsReceived       Friend[] @relation("FriendReceiver")
+  sentFriendRequests    FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+  
   // ===== NEW SOCIAL MEDIA RELATIONS =====
   
   // Content Creation
   posts         Post[]
   stories       Story[]
+  memes         Meme[]  // User's uploaded memes
   
   // Interactions
   likes         Like[]
@@ -505,6 +512,7 @@ model MultiplayerContest {
   id          String   @id @default(cuid())
   creatorId   String
   title       String?
+  roomCode    String?  @unique  // For join-by-code multiplayer
   status      String   @default("pending")
   startTime   DateTime?
   endTime     DateTime?
@@ -517,6 +525,7 @@ model MultiplayerContest {
   
   @@index([creatorId])
   @@index([status])
+  @@index([roomCode])
 }
 
 model ContestParticipant {
@@ -535,4 +544,66 @@ model ContestParticipant {
   @@unique([contestId, userId])
   @@index([userId])
   @@index([contestId, status])
+}
+
+// ============================================
+// FRIEND SYSTEM (For Multiplayer Games)
+// ============================================
+
+model Friend {
+  id        String   @id @default(cuid())
+  userId    String   // User who initiated friendship
+  friendId  String   // User who accepted
+  createdAt DateTime @default(now())
+  
+  user   User @relation("FriendInitiator", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendReceiver", fields: [friendId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, friendId])
+  @@index([userId])
+  @@index([friendId])
+}
+
+model FriendRequest {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     String   @default("pending") // pending, accepted, rejected
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  sender   User @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@unique([senderId, receiverId])
+  @@index([receiverId])
+  @@index([senderId])
+}
+
+// ============================================
+// MEMES (For Game Content)
+// ============================================
+
+model Meme {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String?
+  url         String
+  publicId    String
+  type        String   // image, gif, video
+  fileSize    Int
+  width       Int?
+  height      Int?
+  duration    Int?
+  isApproved  Boolean  @default(true)
+  views       Int      @default(0)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isApproved])
+  @@index([createdAt])
 }
