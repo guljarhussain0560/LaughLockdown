@@ -27,3 +27,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ message: 'Rejected' });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+  const { id } = await params;
+  const fr = await prisma.friendRequest.findUnique({ where: { id } });
+
+  if (!fr) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  
+  // Only the sender can cancel their own request
+  if (fr.senderId !== user.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+
+  await prisma.friendRequest.delete({ where: { id } });
+  return NextResponse.json({ message: 'Request cancelled' });
+}

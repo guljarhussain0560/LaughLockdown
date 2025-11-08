@@ -30,9 +30,51 @@ export async function POST(req: NextRequest) {
 
   const { receiverId } = await req.json();
   
+  // Validate receiverId
+  if (!receiverId || receiverId === user.id) {
+    return NextResponse.json({ error: 'Invalid receiver ID' }, { status: 400 });
+  }
+
+  // Check if receiver exists
+  const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
+  if (!receiver) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  // Check if already friends
+  const existingFriend = await prisma.friend.findFirst({
+    where: {
+      OR: [
+        { userId: user.id, friendId: receiverId },
+        { userId: receiverId, friendId: user.id },
+      ],
+    },
+  });
+
+  if (existingFriend) {
+    return NextResponse.json({ error: 'Already friends' }, { status: 400 });
+  }
+
+  // Check for existing pending request
+  const existingRequest = await prisma.friendRequest.findFirst({
+    where: {
+      OR: [
+        { senderId: user.id, receiverId, status: 'pending' },
+        { senderId: receiverId, receiverId: user.id, status: 'pending' },
+      ],
+    },
+  });
+
+  if (existingRequest) {
+    return NextResponse.json({ error: 'Request already exists' }, { status: 400 });
+  }
+
   const request = await prisma.friendRequest.create({
     data: { senderId: user.id, receiverId },
-    include: { receiver: { select: { id: true, name: true, username: true, image: true } } },
+    include: { 
+      sender: { select: { id: true, name: true, username: true, image: true } },
+      receiver: { select: { id: true, name: true, username: true, image: true } } 
+    },
   });
   return NextResponse.json({ request });
 }

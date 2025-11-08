@@ -42,6 +42,8 @@ export default function NetworkPage() {
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -102,50 +104,80 @@ export default function NetworkPage() {
 
   const sendFriendRequest = async (userId: string) => {
     try {
+      setError(null);
       const res = await fetch('/api/friend-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ receiverId: userId }),
       });
 
-      if (res.ok) {
-        // Refresh data
-        await fetchData();
-        await handleSearch();
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to send request');
+        return;
       }
+
+      setSuccess('Friend request sent!');
+      setTimeout(() => setSuccess(null), 3000);
+      
+      // Refresh data
+      await fetchData();
+      await handleSearch();
     } catch (error) {
       console.error('Error sending friend request:', error);
+      setError('Failed to send friend request');
     }
   };
 
   const respondToRequest = async (requestId: string, action: 'accept' | 'reject') => {
     try {
+      setError(null);
       const res = await fetch(`/api/friend-requests/${requestId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
       });
 
-      if (res.ok) {
-        await fetchData();
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to respond to request');
+        return;
       }
+
+      setSuccess(action === 'accept' ? 'Friend request accepted!' : 'Friend request declined');
+      setTimeout(() => setSuccess(null), 3000);
+
+      await fetchData();
     } catch (error) {
       console.error('Error responding to request:', error);
+      setError('Failed to respond to request');
     }
   };
 
   const cancelRequest = async (requestId: string) => {
     try {
+      setError(null);
       const res = await fetch(`/api/friend-requests/${requestId}`, {
         method: 'DELETE',
       });
 
-      if (res.ok) {
-        await fetchData();
-        await handleSearch();
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to cancel request');
+        return;
       }
+
+      setSuccess('Friend request cancelled');
+      setTimeout(() => setSuccess(null), 3000);
+
+      await fetchData();
+      await handleSearch();
     } catch (error) {
       console.error('Error cancelling request:', error);
+      setError('Failed to cancel request');
     }
   };
 
@@ -153,17 +185,27 @@ export default function NetworkPage() {
     if (!confirm('Are you sure you want to remove this friend?')) return;
 
     try {
+      setError(null);
       const res = await fetch('/api/friends', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ friendId }),
       });
 
-      if (res.ok) {
-        await fetchData();
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to remove friend');
+        return;
       }
+
+      setSuccess('Friend removed');
+      setTimeout(() => setSuccess(null), 3000);
+
+      await fetchData();
     } catch (error) {
       console.error('Error removing friend:', error);
+      setError('Failed to remove friend');
     }
   };
 
@@ -189,6 +231,18 @@ export default function NetworkPage() {
       <Navbar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-xl text-red-700 dark:text-red-300">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="mb-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-xl text-green-700 dark:text-green-300">
+              {success}
+            </div>
+          )}
+
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Network</h1>
