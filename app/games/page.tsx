@@ -1,9 +1,91 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
+interface GameInvitation {
+  id: string;
+  contestId: string;
+  status: string;
+  createdAt: string;
+  contest: {
+    id: string;
+    title: string | null;
+    roomCode: string | null;
+    status: string;
+    creator: {
+      id: string;
+      name: string | null;
+      username: string | null;
+      image: string | null;
+    };
+  };
+}
+
 export default function GamesPage() {
+  const { status } = useSession();
+  const router = useRouter();
+  const [invitations, setInvitations] = useState<GameInvitation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchInvitations();
+      // Auto-refresh invitations every 30 seconds
+      const interval = setInterval(fetchInvitations, 30000);
+      return () => clearInterval(interval);
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
+    }
+  }, [status]);
+
+  const fetchInvitations = async () => {
+    try {
+      const res = await fetch('/api/multiplayer-contests/invitations');
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(data.invitations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching invitations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const acceptInvitation = async (contestId: string) => {
+    try {
+      const res = await fetch(`/api/multiplayer-contests/${contestId}/accept`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        // Redirect to the game
+        router.push(`/multiplayer/${contestId}`);
+      }
+    } catch (err) {
+      console.error('Error accepting invitation:', err);
+    }
+  };
+
+  const declineInvitation = async (contestId: string) => {
+    try {
+      const res = await fetch(`/api/multiplayer-contests/${contestId}/decline`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        // Remove from list
+        setInvitations(invitations.filter(inv => inv.contestId !== contestId));
+      }
+    } catch (err) {
+      console.error('Error declining invitation:', err);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -19,6 +101,56 @@ export default function GamesPage() {
               Test your self-control with hilarious memes
             </p>
           </div>
+
+          {/* Game Invitations */}
+          {status === 'authenticated' && !loading && invitations.length > 0 && (
+            <div className="mb-4 sm:mb-6">
+              <h2 className="mb-3 text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+                Game Invitations
+              </h2>
+              <div className="space-y-3">
+                {invitations.map((invitation) => (
+                  <div
+                    key={invitation.id}
+                    className="flex items-center gap-3 p-4 bg-white border border-blue-200 rounded-lg sm:p-4 dark:bg-gray-900 dark:border-blue-800"
+                  >
+                    <div className="flex items-center justify-center flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full sm:w-12 sm:h-12 dark:bg-blue-900/30">
+                      <svg className="w-5 h-5 text-blue-600 sm:w-6 sm:h-6 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 sm:text-base dark:text-white">
+                        {invitation.contest.creator.name || invitation.contest.creator.username || 'A friend'}
+                      </div>
+                      <div className="text-xs text-gray-600 sm:text-sm dark:text-gray-400">
+                        invited you to play {invitation.contest.title || 'a multiplayer game'}
+                      </div>
+                      {invitation.contest.roomCode && (
+                        <div className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                          Room: {invitation.contest.roomCode}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => acceptInvitation(invitation.contestId)}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors touch-manipulation"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => declineInvitation(invitation.contestId)}
+                        className="px-3 py-1.5 text-sm font-medium text-white bg-gray-600 rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-colors touch-manipulation"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Featured Game */}
           <div className="mb-4 sm:mb-8">
