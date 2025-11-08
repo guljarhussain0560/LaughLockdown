@@ -18,7 +18,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (action === 'accept') {
     await prisma.$transaction([
+      // Create bidirectional friendship - both users should see each other as friends
       prisma.friend.create({ data: { userId: fr.senderId, friendId: fr.receiverId } }),
+      prisma.friend.create({ data: { userId: fr.receiverId, friendId: fr.senderId } }),
       prisma.friendRequest.update({ where: { id }, data: { status: 'accepted' } }),
     ]);
     return NextResponse.json({ message: 'Accepted' });

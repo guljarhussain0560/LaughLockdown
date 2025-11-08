@@ -86,21 +86,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-blue-600 dark:bg-blue-700 items-center justify-center p-12">
+      <div className="items-center justify-center hidden p-12 bg-blue-600 lg:flex lg:w-1/2 dark:bg-blue-700">
         <div className="max-w-md">
           <Link href="/" className="inline-block mb-8">
-            <h1 className="text-5xl font-bold text-white mb-2">
+            <h1 className="mb-2 text-5xl font-bold text-white">
               LaughLockdown
             </h1>
           </Link>
-          <p className="text-xl text-blue-100 mb-8">
+          <p className="mb-8 text-xl text-blue-100">
             Test your self-control with hilarious memes. Compete with players worldwide.
           </p>
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-blue-50">
-              <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -108,7 +108,7 @@ export default function LoginPage() {
               <span>Real-time AI face detection</span>
             </div>
             <div className="flex items-center gap-3 text-blue-50">
-              <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -116,7 +116,7 @@ export default function LoginPage() {
               <span>Multiplayer challenges</span>
             </div>
             <div className="flex items-center gap-3 text-blue-50">
-              <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -128,33 +128,33 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8">
+      <div className="flex items-center justify-center flex-1 p-4 sm:p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-6 sm:mb-8">
+          <div className="mb-6 text-center lg:hidden sm:mb-8">
             <Link href="/" className="inline-block">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
                 LaughLockdown
               </h1>
             </Link>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 sm:p-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="p-4 bg-white border border-gray-200 rounded-lg dark:bg-gray-900 dark:border-gray-800 sm:p-8">
+            <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl dark:text-white">
               {isSignUp ? 'Create Account' : 'Sign In'}
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
+            <p className="mb-4 text-sm text-gray-600 sm:text-base dark:text-gray-400 sm:mb-6">
               {isSignUp ? 'Start your gaming journey' : 'Welcome back, player'}
             </p>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-6">
-                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <div className="p-3 mb-6 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
 
@@ -162,7 +162,7 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 touch-manipulation">
               {isSignUp && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Name
                   </label>
                   <input
@@ -177,7 +177,7 @@ export default function LoginPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Email
                 </label>
                 <input
@@ -191,7 +191,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Password
                 </label>
                 <input
@@ -207,7 +207,7 @@ export default function LoginPage() {
 
               {isSignUp && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                     Confirm Password
                   </label>
                   <input
@@ -231,9 +231,9 @@ export default function LoginPage() {
             </form>
 
             {/* Divider */}
-            <div className="my-4 sm:my-6 flex items-center">
+            <div className="flex items-center my-4 sm:my-6">
               <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
-              <span className="px-3 sm:px-4 text-gray-500 dark:text-gray-400 text-xs sm:text-sm">or</span>
+              <span className="px-3 text-xs text-gray-500 sm:px-4 dark:text-gray-400 sm:text-sm">or</span>
               <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
             </div>
 
@@ -265,13 +265,13 @@ export default function LoginPage() {
             </button>
 
             {/* Toggle Sign In/Sign Up */}
-            <div className="mt-4 sm:mt-6 text-center">
+            <div className="mt-4 text-center sm:mt-6">
               <button
                 onClick={() => {
                   setIsSignUp(!isSignUp);
                   setError('');
                 }}
-                className="text-blue-600 dark:text-blue-400 hover:underline active:text-blue-800 text-xs sm:text-sm font-medium touch-manipulation py-2"
+                className="py-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline active:text-blue-800 sm:text-sm touch-manipulation"
               >
                 {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
               </button>
@@ -279,10 +279,10 @@ export default function LoginPage() {
           </div>
 
           {/* Back to Home */}
-          <div className="mt-4 sm:mt-6 text-center">
+          <div className="mt-4 text-center sm:mt-6">
             <Link
               href="/"
-              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs sm:text-sm inline-flex items-center gap-1 touch-manipulation py-2"
+              className="inline-flex items-center gap-1 py-2 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white sm:text-sm touch-manipulation"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
