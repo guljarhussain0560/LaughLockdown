@@ -1,0 +1,538 @@
+// ENHANCED PRISMA SCHEMA FOR SOCIAL MEDIA TRANSFORMATION
+// This schema adds full social media features to LaughLockdown
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // ===== SOCIAL MEDIA PROFILE FIELDS =====
+  username      String?   @unique  // @username for mentions
+  bio           String?   @db.Text
+  avatar        String?
+  coverImage    String?
+  website       String?
+  location      String?
+  isVerified    Boolean   @default(false)  // Blue checkmark
+  isPrivate     Boolean   @default(false)  // Private account
+  
+  // ===== EXISTING RELATIONS (Keep for backward compatibility) =====
+  accounts              Account[]
+  sessions              Session[]
+  
+  // Game Relations
+  contests              Contest[]
+  userStats             UserStats?
+  achievements          Achievement[]
+  contestsCreated       MultiplayerContest[] @relation("ContestCreator")
+  contestParticipants   ContestParticipant[]
+  
+  // Old Smile Network (will be deprecated in favor of Follow system)
+  sentSmileRequests     SmileRequest[] @relation("SentRequests")
+  receivedSmileRequests SmileRequest[] @relation("ReceivedRequests")
+  smileConnectionsFrom  SmileConnection[] @relation("ConnectionFrom")
+  smileConnectionsTo    SmileConnection[] @relation("ConnectionTo")
+  
+  // ===== NEW SOCIAL MEDIA RELATIONS =====
+  
+  // Content Creation
+  posts         Post[]
+  stories       Story[]
+  
+  // Interactions
+  likes         Like[]
+  comments      Comment[]
+  commentLikes  CommentLike[]
+  shares        Share[]
+  bookmarks     Bookmark[]
+  storyViews    StoryView[]
+  
+  // Social Graph
+  followers     Follow[] @relation("Following")  // Users following this user
+  following     Follow[] @relation("Follower")   // Users this user follows
+  
+  // Communications
+  conversations Conversation[]
+  messages      Message[]
+  
+  // Notifications
+  notifications        Notification[]
+  triggeredNotifications Notification[] @relation("NotificationActor")
+  
+  // Mentions & Tags
+  mentionedInPosts   Post[]    @relation("PostMentions")
+  mentionedInComments Comment[] @relation("CommentMentions")
+  
+  @@index([username])
+  @@index([email])
+}
+
+// OAuth accounts
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// SOCIAL MEDIA: POSTS & CONTENT
+// ============================================
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  GIF
+  CAROUSEL  // Multiple images
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Content
+  caption       String?   @db.Text
+  mediaType     MediaType
+  mediaUrls     String[]  // Array for carousel posts
+  thumbnailUrl  String?   // For videos
+  
+  // Author
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Interactions
+  likes         Like[]
+  comments      Comment[]
+  shares        Share[]
+  bookmarks     Bookmark[]
+  
+  // Discovery
+  hashtags      Hashtag[]
+  mentions      User[]    @relation("PostMentions")
+  
+  // Metadata
+  viewCount     Int       @default(0)
+  isArchived    Boolean   @default(false)
+  location      String?
+  
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([viewCount])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  content   String   @db.Text
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Nested replies (threaded comments)
+  parentId  String?
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  
+  // Comment interactions
+  likes     CommentLike[]
+  mentions  User[]       @relation("CommentMentions")
+  
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+}
+
+model CommentLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model Share {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Optional: Share as new post or just track
+  caption   String?  @db.Text
+  
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// SOCIAL MEDIA: STORIES
+// ============================================
+
+model Story {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  expiresAt DateTime  // 24 hours from creation
+  
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  mediaType MediaType
+  mediaUrl  String
+  
+  views     StoryView[]
+  
+  @@index([authorId])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+model StoryView {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  storyId   String
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([storyId, userId])
+  @@index([storyId])
+  @@index([userId])
+}
+
+// ============================================
+// SOCIAL MEDIA: FOLLOW SYSTEM
+// ============================================
+
+model Follow {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  
+  followerId  String   // User who is following
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  
+  followingId String   // User being followed
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@index([createdAt])
+}
+
+// ============================================
+// SOCIAL MEDIA: MESSAGING
+// ============================================
+
+model Conversation {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastMessageAt DateTime @default(now())
+  
+  participants User[]
+  messages    Message[]
+  
+  isGroup     Boolean   @default(false)
+  groupName   String?
+  groupImage  String?
+  
+  @@index([updatedAt])
+  @@index([lastMessageAt])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  
+  content        String?  @db.Text
+  mediaUrl       String?
+  mediaType      MediaType?
+  
+  senderId       String
+  sender         User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// ============================================
+// SOCIAL MEDIA: NOTIFICATIONS
+// ============================================
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+  MENTION
+  MESSAGE
+  GAME_CHALLENGE
+  SHARE
+  STORY_VIEW
+  COMMENT_LIKE
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  type      NotificationType
+  content   String
+  link      String?  // Link to the content (post, profile, etc.)
+  
+  recipientId String
+  recipient   User   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  actorId   String?  // User who triggered the notification
+  actor     User?  @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  
+  isRead    Boolean @default(false)
+  readAt    DateTime?
+  
+  @@index([recipientId])
+  @@index([createdAt])
+  @@index([isRead])
+}
+
+// ============================================
+// SOCIAL MEDIA: HASHTAGS
+// ============================================
+
+model Hashtag {
+  id        String   @id @default(cuid())
+  name      String   @unique  // e.g., "funny" (without #)
+  posts     Post[]
+  postCount Int      @default(0)
+  createdAt DateTime @default(now())
+  
+  @@index([postCount])
+  @@index([name])
+}
+
+// ============================================
+// EXISTING GAME MODELS (Keep for backward compatibility)
+// ============================================
+
+model Contest {
+  id           String   @id @default(cuid())
+  userId       String
+  survivalTime Int
+  result       String
+  memesViewed  Int      @default(0)
+  rank         Int?
+  createdAt    DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([survivalTime])
+  @@index([createdAt])
+}
+
+model UserStats {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  totalContests         Int      @default(0)
+  totalWins             Int      @default(0)
+  totalLosses           Int      @default(0)
+  bestSurvivalTime      Int      @default(0)
+  totalSurvivalTime     Int      @default(0)
+  averageSurvivalTime   Float    @default(0)
+  currentStreak         Int      @default(0)
+  longestStreak         Int      @default(0)
+  lastPlayedAt          DateTime?
+  updatedAt             DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([bestSurvivalTime])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  title       String
+  description String
+  icon        String
+  unlockedAt  DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, type])
+  @@index([userId])
+}
+
+// OLD Smile Network (Keep for migration, can be removed later)
+model SmileRequest {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     String   @default("pending")
+  message    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  sender   User @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId])
+}
+
+model SmileConnection {
+  id          String   @id @default(cuid())
+  userId1     String
+  userId2     String
+  createdAt   DateTime @default(now())
+  
+  user1 User @relation("ConnectionFrom", fields: [userId1], references: [id], onDelete: Cascade)
+  user2 User @relation("ConnectionTo", fields: [userId2], references: [id], onDelete: Cascade)
+  
+  @@unique([userId1, userId2])
+  @@index([userId1])
+  @@index([userId2])
+}
+
+model MultiplayerContest {
+  id          String   @id @default(cuid())
+  creatorId   String
+  title       String?
+  status      String   @default("pending")
+  startTime   DateTime?
+  endTime     DateTime?
+  winnerId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  creator      User                   @relation("ContestCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  participants ContestParticipant[]
+  
+  @@index([creatorId])
+  @@index([status])
+}
+
+model ContestParticipant {
+  id                String   @id @default(cuid())
+  contestId         String
+  userId            String
+  status            String   @default("invited")
+  survivalTime      Int?
+  eliminatedAt      DateTime?
+  joinedAt          DateTime?
+  createdAt         DateTime @default(now())
+  
+  contest MultiplayerContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([contestId, userId])
+  @@index([userId])
+  @@index([contestId, status])
+}
